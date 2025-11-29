@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OI Viewer</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1680px;
+            margin: 0 auto;
+            background: #3a3a3a;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            padding: 32px;
+            box-sizing: border-box;
+        }
+
+        .input-container {
+            width: 100%;
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .fetch-button {
+            padding: 18px 36px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .fetch-button:hover {
+            background-color: #45a049;
+        }
+
+        .chart-container {
+            width: 100%;
+            margin-top: 12px;
+            border: 1px solid #555;
+            border-radius: 10px;
+            padding: 24px;
+            background-color: #444;
+            box-sizing: border-box;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            min-height: 800px;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="input-container">
+            <label for="csvFileInput1" id="fetchButton1" class="fetch-button">選擇 OI CSV 檔案</label>
+            <input type="file" id="csvFileInput1" accept=".csv" class="file-input">
+        </div>
+
+        <hr style="height:2px;border-width:0;color:gray;background-color:gray;width:100%;">
+
+        <div class="chart-container">
+            <div id="chartOI" class="chart-wrapper"></div>
+        </div>
+    </div>
+
+    <script>
+        // Color palette for different expirations
+        const colorPalette = [
+            'rgb(255,111,0)',   // Orange
+            'rgb(151,255,0)',   // Green
+            'rgb(44,255,150)',  // Cyan
+            'rgb(0,25,255)',    // Blue
+            'rgb(0,0,200)',     // Dark Blue
+            'rgb(150,0,90)',    // Purple
+            'rgb(255,0,0)',     // Red
+            'rgb(0,255,255)',   // Aqua
+            'rgb(255,255,0)',   // Yellow
+            'rgb(128,0,128)'    // Violet
+        ];
+
+        document.getElementById('csvFileInput1').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const csvData = e.target.result;
+                    parseAndPlotCSV(csvData);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseAndPlotCSV(csvData) {
+            const lines = csvData.trim().split('\n');
+            const headers = lines[0].split(',');
+
+            // Parse CSV data
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                if (values.length === headers.length) {
+                    data.push({
+                        symbol: values[0],
+                        expiration: values[1],
+                        strike: parseFloat(values[2]),
+                        right: values[3],
+                        timestamp: values[4],
+                        open_interest: parseInt(values[5])
+                    });
+                }
+            }
+
+            // Group data by expiration and strike
+            const expirations = [...new Set(data.map(d => d.expiration))].sort();
+            const strikes = [...new Set(data.map(d => d.strike))].sort((a, b) => a - b);
+
+            // Prepare data for plotting
+            const callTraces = [];
+            const putTraces = [];
+
+            expirations.forEach((exp, idx) => {
+                const expData = data.filter(d => d.expiration === exp);
+                const color = colorPalette[idx % colorPalette.length];
+
+                // Call data
+                const callOI = strikes.map(strike => {
+                    const record = expData.find(d => d.strike === strike && d.right === 'CALL');
+                    return record ? record.open_interest : 0;
+                });
+
+                // Put data (negative for left side)
+                const putOI = strikes.map(strike => {
+                    const record = expData.find(d => d.strike === strike && d.right === 'PUT');
+                    return record ? -record.open_interest : 0;
+                });
+
+                // Calculate DTE (days to expiration)
+                const dte = calculateDTE(exp);
+                const expLabel = `${exp} (${dte}dte)`;
+
+                callTraces.push({
+                    x: callOI,
+                    y: strikes,
+                    name: expLabel,
+                    type: 'bar',
+                    orientation: 'h',
+                    marker: { color: color },
+                    legendgroup: exp,
+                    hovertemplate: `<b>${expLabel} CALL</b><br>Strike: %{y}<br>OI: %{x}<extra></extra>`
+                });
+
+                putTraces.push({
+                    x: putOI,
+                    y: strikes,
+                    name: `${expLabel} PUT`,
+                    type: 'bar',
+                    orientation: 'h',
+                    marker: { color: color },
+                    legendgroup: exp,
+                    showlegend: false,
+                    // text: y,
+                    customdata: putOI.map(v => Math.abs(v)),
+                    hovertemplate: `<b>${expLabel} PUT</b><br>Strike: %{y}<br>OI: %{customdata}<extra></extra>`
+                });
+            });
+
+            // 交錯排列:每個到期日的 PUT 和 CALL 配對
+            const traces = [];
+            for (let i = 0; i < expirations.length; i++) {
+                traces.push(callTraces[i]);  // 先 CALL
+                traces.push(putTraces[i]);   // 後 PUT
+            }
+
+            // Calculate total OI per strike (sum across all expirations)
+            const totalCallOIPerStrike = strikes.map((strike, idx) => {
+                return callTraces.reduce((sum, trace) => sum + trace.x[idx], 0);
+            });
+
+            const totalPutOIPerStrike = strikes.map((strike, idx) => {
+                return putTraces.reduce((sum, trace) => sum + Math.abs(trace.x[idx]), 0);
+            });
+
+            // Find max total OI across all strikes
+            const maxTotalCallOI = Math.max(...totalCallOIPerStrike);
+            const maxTotalPutOI = Math.max(...totalPutOIPerStrike);
+            const maxOI = Math.max(maxTotalCallOI, maxTotalPutOI);
+            const xRange = maxOI * 1.05;
+
+            // Layout
+            const layout = {
+                title: {
+                    text: `${data[0].symbol} OI Distribution`,
+                    font: { size: 14 }
+                },
+                barmode: 'relative',
+                xaxis: {
+                    title: 'Open Interest',
+                    range: [-xRange, xRange],
+                    // autorange: true,
+                    gridcolor: 'white',
+                    linecolor: 'white',
+                    tickfont: { size: 12 },
+                    showgrid: true
+                    // zeroline: true,
+                    // zerolinecolor: "#ffffff",
+                    // zerolinewidth: 1
+                },
+                yaxis: {
+                    title: 'Strike Price',
+                    gridcolor: 'white',
+                    linecolor: 'white',
+                    tickfont: { size: 12 },
+                    showgrid: true,
+                    autorange: true
+                },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: 0,
+                        x1: 0,
+                        y0: 0,
+                        y1: 1,
+                        yref: 'paper',  // 使用相對座標,0=底部, 1=頂部
+                        line: {
+                            color: 'white',      // 線的顏色
+                            width: 1,          // 線的寬度
+                            dash: 'solid'      // 'solid', 'dash', 'dot', 'dashdot'
+                        }
+                    }
+                ],
+                plot_bgcolor: '#E5ECF6',
+                paper_bgcolor: 'white',
+                legend: {
+                    orientation: "v",
+                    x: 0.98,
+                    y: 0.02,
+                    xanchor: "right",
+                    yanchor: "bottom",
+                    font: { size: 10 },
+                    itemwidth: 80,
+                    bgcolor: "rgba(255,255,255,0)",
+                    bordercolor: "#ccc",
+                    borderwidth: 0
+                },
+                margin: { l: 60, r: 40, t: 40, b: 60 },
+                height: 1200,
+                annotations: [
+                    {
+                        x: -xRange * 0.5,
+                        y: Math.max(...strikes),
+                        text: 'PUT',
+                        showarrow: false,
+                        font: { size: 12, color: '#2a3f5f' }
+                    },
+                    {
+                        x: xRange * 0.5,
+                        y: Math.max(...strikes),
+                        text: 'CALL',
+                        showarrow: false,
+                        font: { size: 12, color: '#2a3f5f' }
+                    }
+                ]
+            };
+            const config = {
+                responsive: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ["lasso2d", "select2d"],
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: `${data[0].symbol}_oi_distribution`,
+                    // height: 1080,
+                    // width: 1920,
+                    scale: 2
+                }
+            };
+            Plotly.newPlot('chartOI', traces, layout, config);
+        }
+
+        function calculateDTE(expirationDate) {
+            const expDate = new Date(expirationDate);
+            const today = new Date();
+            const diffTime = expDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-OI Comparison Tool</title>
+    <script type="text/javascript">window.PlotlyConfig = { MathJaxConfig: 'local' };</script>
+    <!-- Google API Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1680px;
+            margin: 0 auto;
+            background: #3a3a3a;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            padding: 32px;
+            box-sizing: border-box;
+        }
+
+        .input-container {
+            width: 100%;
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .fetch-button {
+            padding: 18px 36px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-right: 12px;
+        }
+
+        .fetch-button:last-of-type {
+            margin-right: 0;
+        }
+
+        .fetch-button:hover {
+            background-color: #45a049;
+        }
+
+        .fetch-button.drag-over {
+            background-color: #2e7d32;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .dataset-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            width: 100%;
+            margin-bottom: 24px;
+        }
+
+        .dataset-panel {
+            border: 1px solid #555;
+            border-radius: 10px;
+            padding: 16px;
+            background-color: #444;
+        }
+
+        .dataset-title {
+            font-size: 18px;
+            margin: 0 0 12px 0;
+            color: #e0e0e0;
+        }
+
+        .info-label {
+            font-weight: normal;
+            color: #b0b0b0;
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .warning-label {
+            color: #d9534f;
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .expiry-button {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            background-color: #444;
+            color: #4CAF50;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+
+        .expiry-button:hover {
+            background-color: #555;
+        }
+
+        .expiry-button.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .expiry-button.exclusive {
+            border-color: #d9534f;
+            color: #d9534f;
+        }
+
+        .expiry-button.exclusive.active {
+            background-color: #d9534f;
+            color: white;
+        }
+
+        .chart-container {
+            width: 100%;
+            margin-top: 12px;
+            border: 1px solid #555;
+            border-radius: 10px;
+            padding: 24px;
+            background-color: #444;
+            display: grid;
+            /* grid-template-columns: 1.8fr 1.8fr 3fr; */
+            grid-template-columns: repeat(3, minmax(360px, 1fr));
+            row-gap: 12px;
+            column-gap: 24px;
+            box-sizing: border-box;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            min-height: 660px;
+        }
+
+        #chartOverlay1,
+        #chartOverlay2,
+        #chartOverlay3,
+        #chartOverlay4,
+        #chartOverlay5 {
+            grid-column: 1 / -1;
+        }
+
+        /* @media (max-width: 1200px) {
+            .chart-container {
+                grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            }
+
+            #chartOverlay {
+                grid-column: 1 / -1;
+            }
+        } */
+
+        .chart-title-panel {
+            grid-column: 1 / -1;
+            min-height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #e0e0e0;
+            text-align: center;
+            padding-bottom: 4px;
+        }
+
+        .footer {
+            margin-top: 0px;
+            margin-bottom: 0px;
+            text-align: center;
+            font-size: 10px;
+            color: #b0b0b0;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="input-container">
+            <label for="csvFileInput1" id="fetchButton1" class="fetch-button">OI 1 Csv</label>
+            <input type="file" id="csvFileInput1" accept=".csv" class="file-input">
+            <label for="csvFileInput2" id="fetchButton2" class="fetch-button">OI 2 Csv</label>
+            <input type="file" id="csvFileInput2" accept=".csv" class="file-input">
+            <label for="csvFileInput3" id="fetchButton3" class="fetch-button">OI 3 Csv</label>
+            <input type="file" id="csvFileInput3" accept=".csv" class="file-input">
+            <label for="csvFileInput4" id="fetchButton4" class="fetch-button">OI 4 Csv</label>
+            <input type="file" id="csvFileInput4" accept=".csv" class="file-input">
+            <label for="csvFileInput5" id="fetchButton5" class="fetch-button">OI 5 Csv</label>
+            <input type="file" id="csvFileInput5" accept=".csv" class="file-input">
+            <label for="csvFileInput6" id="fetchButton6" class="fetch-button">OI 6 Csv</label>
+            <input type="file" id="csvFileInput6" accept=".csv" class="file-input">
+            <label id="resetButton" class="fetch-button">Reset</label>
+        </div>
+
+        <hr style="height:2px;border-width:0;color:gray;background-color:gray">
+
+        <div class="dataset-wrapper">
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 1 到期日</h2>
+                <div class="info-label" id="dataset1File"></div>
+                <div class="info-label" id="dataset1Info"></div>
+                <div class="info-label warning-label" id="dataset1Warning"></div>
+                <div id="expiryButtons1" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 2 到期日</h2>
+                <div class="info-label" id="dataset2File"></div>
+                <div class="info-label" id="dataset2Info"></div>
+                <div class="info-label warning-label" id="dataset2Warning"></div>
+                <div id="expiryButtons2" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 3 到期日</h2>
+                <div class="info-label" id="dataset3File"></div>
+                <div class="info-label" id="dataset3Info"></div>
+                <div class="info-label warning-label" id="dataset3Warning"></div>
+                <div id="expiryButtons3" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 4 到期日</h2>
+                <div class="info-label" id="dataset4File"></div>
+                <div class="info-label" id="dataset4Info"></div>
+                <div class="info-label warning-label" id="dataset4Warning"></div>
+                <div id="expiryButtons4" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 5 到期日</h2>
+                <div class="info-label" id="dataset5File"></div>
+                <div class="info-label" id="dataset5Info"></div>
+                <div class="info-label warning-label" id="dataset5Warning"></div>
+                <div id="expiryButtons5" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">OI 6 到期日</h2>
+                <div class="info-label" id="dataset6File"></div>
+                <div class="info-label" id="dataset6Info"></div>
+                <div class="info-label warning-label" id="dataset6Warning"></div>
+                <div id="expiryButtons6" class="button-group"></div>
+            </div>
+            <div class="dataset-panel">
+                <h2 class="dataset-title">Difference 差值</h2>
+                <div class="info-label" id="datasetDiffInfo"></div>
+                <div class="info-label warning-label" id="datasetDiffWarning"></div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <!-- <div id="chartTitle" class="chart-title-panel"></div> -->
+            <div id="chartOverlay1" class="chart-wrapper"></div>
+            <div id="chartOverlay2" class="chart-wrapper"></div>
+            <div id="chartOverlay3" class="chart-wrapper"></div>
+            <div id="chartOverlay4" class="chart-wrapper"></div>
+            <div id="chartOverlay5" class="chart-wrapper"></div>
+            <!-- <div id="chart1" class="chart-wrapper"></div>
+            <div id="chart2" class="chart-wrapper"></div>
+            <div id="chartDiff" class="chart-wrapper"></div> -->
+        </div>
+    </div>
+    <!-- <div class="footer">Developed by Sepp</div> -->
+    <!-- Plotly.js from CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script>
+        // ===== Google Drive API 設定 =====
+        const GOOGLE_CONFIG = {
+            CLIENT_ID: '1033958660645-45g683r139ike9j0s0viusf4prq72hh1.apps.googleusercontent.com',
+            API_KEY: 'AIzaSyCW-kR4HLNNIlIDBeIvCpXVxZDwof7Jq9s', // 需要從 Google Cloud Console 取得
+            SCOPES: 'https://www.googleapis.com/auth/drive.readonly',
+            DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            FOLDER_NAME: 'ThetaDataOI'
+        };
+
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+        let accessToken = null;
+        let pickerApiLoaded = false;
+        let currentPickerCallback = null;
+
+        // 初始化 Google API
+        function gapiLoaded() {
+            gapi.load('client:picker', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: GOOGLE_CONFIG.API_KEY,
+                    discoveryDocs: GOOGLE_CONFIG.DISCOVERY_DOCS,
+                });
+                gapiInited = true;
+                maybeEnableButtons();
+            } catch (error) {
+                console.error('Error initializing GAPI client:', error);
+            }
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                scope: GOOGLE_CONFIG.SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        console.error('Token error:', response);
+                        alert('Google 認證失敗，請重試。');
+                        return;
+                    }
+                    accessToken = response.access_token;
+                    if (currentPickerCallback) {
+                        createPicker(currentPickerCallback);
+                    }
+                },
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                console.log('Google API 已就緒');
+            }
+        }
+
+        // 尋找 ThetaDataOI 資料夾
+        async function findThetaDataFolder() {
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: `name='${GOOGLE_CONFIG.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                    fields: 'files(id, name)',
+                    spaces: 'drive'
+                });
+
+                const files = response.result.files;
+                if (files && files.length > 0) {
+                    return files[0].id;
+                }
+
+                console.warn(`找不到資料夾: ${GOOGLE_CONFIG.FOLDER_NAME}`);
+                return null;
+            } catch (error) {
+                console.error('尋找資料夾時發生錯誤:', error);
+                return null;
+            }
+        }
+
+        // 建立 Google Picker
+        async function createPicker(callback) {
+            const folderId = await findThetaDataFolder();
+
+            if (!folderId) {
+                alert(`找不到 Google Drive 資料夾 "${GOOGLE_CONFIG.FOLDER_NAME}"，請確認資料夾存在。`);
+                return;
+            }
+
+            const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+                .setParent(folderId)
+                .setIncludeFolders(true)  // 改為 true，顯示資料夾
+                .setSelectFolderEnabled(false)  // 不允許選擇資料夾本身
+                .setMimeTypes('text/csv,application/vnd.ms-excel');
+
+            const picker = new google.picker.PickerBuilder()
+                .setAppId(GOOGLE_CONFIG.CLIENT_ID.split('-')[0])
+                .setOAuthToken(accessToken)
+                .addView(view)
+                .setDeveloperKey(GOOGLE_CONFIG.API_KEY)
+                .setCallback((data) => pickerCallback(data, callback))
+                .setTitle(`選擇 CSV 檔案 - ${GOOGLE_CONFIG.FOLDER_NAME}`)
+                .build();
+
+            picker.setVisible(true);
+        }
+
+        // Picker 回調函數
+        function pickerCallback(data, userCallback) {
+            if (data.action === google.picker.Action.PICKED) {
+                const file = data.docs[0];
+                downloadFileFromDrive(file.id, file.name, userCallback);
+            }
+        }
+
+        // 從 Google Drive 下載檔案
+        async function downloadFileFromDrive(fileId, fileName, callback) {
+            try {
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+
+                const content = response.body;
+
+                // 建立一個模擬的 File 物件
+                const blob = new Blob([content], { type: 'text/csv' });
+                const file = new File([blob], fileName, { type: 'text/csv' });
+
+                if (callback) {
+                    callback(file);
+                }
+            } catch (error) {
+                console.error('下載檔案時發生錯誤:', error);
+                alert(`下載檔案失敗: ${error.message}`);
+            }
+        }
+
+        // 開啟 Picker 的主要函數
+        function openGooglePicker(callback) {
+            currentPickerCallback = callback;
+
+            if (!gapiInited || !gisInited) {
+                alert('Google API 尚未初始化，請稍後再試。');
+                return;
+            }
+
+            if (!accessToken) {
+                // 需要授權
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                // 已有 token，直接開啟 picker
+                createPicker(callback);
+            }
+        }
+
+        // 載入 Google API
+        window.addEventListener('load', () => {
+            if (typeof gapi !== 'undefined') {
+                gapiLoaded();
+            }
+            if (typeof google !== 'undefined' && google.accounts) {
+                gisLoaded();
+            }
+        });
+
+        // ===== 原有的常數定義 =====
+        const POSITIVE_FILL = "#b7d7a8";
+        const NEGATIVE_FILL = "#F4CCCC";
+        const POSITIVE_BORDER = "#b7d7a8";
+        const NEGATIVE_BORDER = "#F4CCCC";
+        const OI1_FILL = "#999999";
+        const OI1_BORDER = "#999999";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // 全局狀態，儲存所有6個OI的資料
+            const globalState = {
+                csv1: null,
+                csv2: null,
+                csv3: null,
+                csv4: null,
+                csv5: null,
+                csv6: null,
+            };
+
+            // 創建5個comparisonManager，對應5個chartOverlay
+            const comparisonManagers = [
+                createComparisonManager({
+                    chartId: null,
+                    combinedChartId: "chartOverlay1",
+                    infoLabelId: null,
+                    warningLabelId: null,
+                    dataset1Key: "csv1",
+                    dataset2Key: "csv2",
+                }),
+                createComparisonManager({
+                    chartId: null,
+                    combinedChartId: "chartOverlay2",
+                    infoLabelId: null,
+                    warningLabelId: null,
+                    dataset1Key: "csv2",
+                    dataset2Key: "csv3",
+                }),
+                createComparisonManager({
+                    chartId: null,
+                    combinedChartId: "chartOverlay3",
+                    infoLabelId: null,
+                    warningLabelId: null,
+                    dataset1Key: "csv3",
+                    dataset2Key: "csv4",
+                }),
+                createComparisonManager({
+                    chartId: null,
+                    combinedChartId: "chartOverlay4",
+                    infoLabelId: null,
+                    warningLabelId: null,
+                    dataset1Key: "csv4",
+                    dataset2Key: "csv5",
+                }),
+                createComparisonManager({
+                    chartId: null,
+                    combinedChartId: "chartOverlay5",
+                    infoLabelId: null,
+                    warningLabelId: null,
+                    dataset1Key: "csv5",
+                    dataset2Key: "csv6",
+                }),
+            ];
+
+            // 更新全局差異資訊顯示
+            function updateGlobalDiffInfo() {
+                const infoLabel = document.getElementById("datasetDiffInfo");
+                const warningLabel = document.getElementById("datasetDiffWarning");
+
+                if (!infoLabel || !warningLabel) {
+                    return;
+                }
+
+                const allKeys = ["csv1", "csv2", "csv3", "csv4", "csv5", "csv6"];
+                const loadedDatasets = allKeys.filter(key => globalState[key] && globalState[key].dataset);
+
+                // 檢查是否所有6個OI都已載入
+                if (loadedDatasets.length < 6) {
+                    const loadedCount = loadedDatasets.length;
+                    infoLabel.textContent = `已載入 ${loadedCount}/6 個檔案，請載入所有檔案並選擇到期日。`;
+                    warningLabel.textContent = "";
+                    return;
+                }
+
+                // 檢查所有OI是否都有選擇到期日
+                const selectedDatasets = allKeys.filter(key =>
+                    globalState[key] &&
+                    globalState[key].dataset &&
+                    globalState[key].expiry
+                );
+
+                if (selectedDatasets.length < 6) {
+                    const selectedCount = selectedDatasets.length;
+                    infoLabel.textContent = `已選擇 ${selectedCount}/6 個到期日，請選擇所有到期日。`;
+                    warningLabel.textContent = "";
+                    return;
+                }
+
+                // 檢查所有到期日是否相同
+                const expiries = selectedDatasets.map(key => globalState[key].expiry);
+                const uniqueExpiries = [...new Set(expiries)];
+
+                if (uniqueExpiries.length > 1) {
+                    const expiryList = allKeys.map((key, index) => {
+                        const oiNum = index + 1;
+                        const expiry = globalState[key]?.expiry || "未選擇";
+                        return `OI${oiNum}: ${expiry}`;
+                    }).join("｜");
+
+                    infoLabel.textContent = expiryList;
+                    warningLabel.textContent = "請選擇相同到期日以顯示比較結果。";
+                    return;
+                }
+
+                // 檢查所有標的是否相同
+                const symbols = selectedDatasets.map(key => globalState[key].symbol || "");
+                const uniqueSymbols = [...new Set(symbols.filter(s => s))];
+
+                if (uniqueSymbols.length > 1) {
+                    const symbolList = allKeys.map((key, index) => {
+                        const oiNum = index + 1;
+                        const symbol = globalState[key]?.symbol || "未知";
+                        return `OI${oiNum}: ${symbol}`;
+                    }).join("｜");
+
+                    infoLabel.textContent = symbolList;
+                    warningLabel.textContent = "請選擇相同標的以顯示比較結果。";
+                    return;
+                }
+
+                // 所有條件滿足，顯示成功資訊
+                const commonExpiry = uniqueExpiries[0];
+                const commonSymbol = uniqueSymbols[0] || "";
+                const symbolPrefix = commonSymbol ? `${commonSymbol}｜` : "";
+
+                // 計算總差值資訊
+                let totalDiffInfo = "";
+                const diffPairs = [
+                    { key1: "csv1", key2: "csv2", label: "OI2-OI1" },
+                    { key1: "csv2", key2: "csv3", label: "OI3-OI2" },
+                    { key1: "csv3", key2: "csv4", label: "OI4-OI3" },
+                    { key1: "csv4", key2: "csv5", label: "OI5-OI4" },
+                    { key1: "csv5", key2: "csv6", label: "OI6-OI5" },
+                ];
+
+                const diffDetails = diffPairs.map(({ key1, key2, label }) => {
+                    const dataset1 = globalState[key1]?.dataset || [];
+                    const dataset2 = globalState[key2]?.dataset || [];
+                    const diffPoints = buildDifferenceDataset(dataset1, dataset2);
+                    const totalDiff = diffPoints.reduce((sum, point) => sum + point.diff, 0) / 1_000_000;
+                    return `${label}: ${formatSignedMillion(totalDiff)}M`;
+                }).join("｜");
+
+                infoLabel.textContent = `${symbolPrefix}比較到期日：${commonExpiry}｜${diffDetails}`;
+                warningLabel.textContent = "所有6個OI到期日相同，比較圖表已更新。";
+            }
+
+            // 合併所有comparisonManager的handleSelectionChange
+            const handleSelectionChange = (key, payload) => {
+                // 更新全局狀態
+                globalState[key] = payload;
+
+                // 更新所有comparisonManager
+                comparisonManagers.forEach(manager => {
+                    manager.handleSelectionChange(key, payload);
+                });
+
+                // 更新全局差異資訊
+                updateGlobalDiffInfo();
+            };
+
+            const datasetConfigs = [
+                {
+                    key: "csv1",
+                    fetchButtonId: "fetchButton1",
+                    fileInputId: "csvFileInput1",
+                    expiryButtonsId: "expiryButtons1",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset1File",
+                    infoLabelId: "dataset1Info",
+                    warningLabelId: "dataset1Warning",
+                },
+                {
+                    key: "csv2",
+                    fetchButtonId: "fetchButton2",
+                    fileInputId: "csvFileInput2",
+                    expiryButtonsId: "expiryButtons2",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset2File",
+                    infoLabelId: "dataset2Info",
+                    warningLabelId: "dataset2Warning",
+                },
+                {
+                    key: "csv3",
+                    fetchButtonId: "fetchButton3",
+                    fileInputId: "csvFileInput3",
+                    expiryButtonsId: "expiryButtons3",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset3File",
+                    infoLabelId: "dataset3Info",
+                    warningLabelId: "dataset3Warning",
+                },
+                {
+                    key: "csv4",
+                    fetchButtonId: "fetchButton4",
+                    fileInputId: "csvFileInput4",
+                    expiryButtonsId: "expiryButtons4",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset4File",
+                    infoLabelId: "dataset4Info",
+                    warningLabelId: "dataset4Warning",
+                },
+                {
+                    key: "csv5",
+                    fetchButtonId: "fetchButton5",
+                    fileInputId: "csvFileInput5",
+                    expiryButtonsId: "expiryButtons5",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset5File",
+                    infoLabelId: "dataset5Info",
+                    warningLabelId: "dataset5Warning",
+                },
+                {
+                    key: "csv6",
+                    fetchButtonId: "fetchButton6",
+                    fileInputId: "csvFileInput6",
+                    expiryButtonsId: "expiryButtons6",
+                    chartId: null, // 不顯示個別圖表
+                    fileLabelId: "dataset6File",
+                    infoLabelId: "dataset6Info",
+                    warningLabelId: "dataset6Warning",
+                },
+            ];
+
+            const managers = {};
+            datasetConfigs.forEach((config) => {
+                managers[config.key] = createDatasetManager({
+                    ...config,
+                    onSelectionChange: handleSelectionChange,
+                });
+            });
+
+            // 設置所有manager之間的關聯，用於同步到期日選擇
+            // 讓每個manager都知道其他所有manager，這樣按下任何到期日按鈕時都能同步
+            const allManagerKeys = Object.keys(managers);
+            allManagerKeys.forEach((key1) => {
+                allManagerKeys.forEach((key2) => {
+                    if (key1 !== key2 && managers[key1] && managers[key2]) {
+                        managers[key1].addOtherManager(managers[key2]);
+                    }
+                });
+            });
+
+            // 設置重置按鈕
+            const resetButton = document.getElementById("resetButton");
+            if (resetButton) {
+                resetButton.addEventListener("click", () => {
+                    // 重置所有dataset managers
+                    Object.values(managers).forEach(manager => {
+                        if (manager && typeof manager.reset === "function") {
+                            manager.reset();
+                        }
+                    });
+
+                    // 重置全局狀態
+                    Object.keys(globalState).forEach(key => {
+                        globalState[key] = null;
+                    });
+
+                    // 更新全局差異資訊
+                    updateGlobalDiffInfo();
+
+                    // 清空所有chartOverlay
+                    ["chartOverlay1", "chartOverlay2", "chartOverlay3", "chartOverlay4", "chartOverlay5"].forEach(chartId => {
+                        const chartElement = document.getElementById(chartId);
+                        if (chartElement && typeof Plotly !== "undefined") {
+                            Plotly.purge(chartId);
+                        }
+                    });
+
+                    // 重置所有file input
+                    ["csvFileInput1", "csvFileInput2", "csvFileInput3", "csvFileInput4", "csvFileInput5", "csvFileInput6"].forEach(inputId => {
+                        const inputElement = document.getElementById(inputId);
+                        if (inputElement) {
+                            inputElement.value = "";
+                        }
+                    });
+                });
+            }
+        });
+
+        function createDatasetManager({
+            key,
+            fetchButtonId,
+            fileInputId,
+            expiryButtonsId,
+            chartId,
+            fileLabelId,
+            infoLabelId,
+            warningLabelId,
+            onSelectionChange,
+        }) {
+            const fetchButton = document.getElementById(fetchButtonId);
+            const fileInput = document.getElementById(fileInputId);
+            const expiryButtonContainer = document.getElementById(expiryButtonsId);
+            const fileLabel = document.getElementById(fileLabelId);
+            const infoLabel = document.getElementById(infoLabelId);
+            const warningLabel = document.getElementById(warningLabelId);
+
+            if (
+                !fetchButton ||
+                !fileInput ||
+                !expiryButtonContainer ||
+                !fileLabel ||
+                !infoLabel ||
+                !warningLabel
+            ) {
+                console.error(`初始化失敗：缺少必要的 DOM 元素。（${fetchButtonId}）`);
+                return {
+                    setOtherManager: () => { },
+                    selectExpiry: () => { },
+                    getExpiryOrder: () => [],
+                };
+            }
+
+            let gammaDatasets = {};
+            let expiryOrder = [];
+            let currentExpiry = null;
+            let currentFileName = "";
+            let currentSymbol = "";
+            let otherManagers = [];
+            const buttonMap = new Map();
+
+            // 修改按鈕點擊事件：使用 Google Picker 而非本地檔案選擇
+            // 點擊按鈕時開啟 Google Picker
+            fetchButton.addEventListener("click", (event) => {
+                event.preventDefault();
+                openGooglePicker(async (file) => {
+                    await processFile(file);
+                });
+            });
+
+            // 保留拖放功能作為備選（可以拖放本地檔案）
+            ["dragenter", "dragover"].forEach((eventName) => {
+                fetchButton.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    fetchButton.classList.add("drag-over");
+                });
+            });
+            ["dragleave", "dragend"].forEach((eventName) => {
+                fetchButton.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    fetchButton.classList.remove("drag-over");
+                });
+            });
+            fetchButton.addEventListener("drop", async (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                fetchButton.classList.remove("drag-over");
+                const file = event.dataTransfer?.files?.[0];
+                await processFile(file);
+            });
+
+            function resetState() {
+                gammaDatasets = {};
+                expiryOrder = [];
+                currentExpiry = null;
+                currentFileName = "";
+                currentSymbol = "";
+                expiryButtonContainer.innerHTML = "";
+                buttonMap.clear();
+                fileLabel.textContent = "";
+                infoLabel.textContent = "";
+                warningLabel.textContent = "";
+                emitSelectionChange(null);
+                if (typeof Plotly !== "undefined" && chartId && document.getElementById(chartId)) {
+                    Plotly.purge(chartId);
+                }
+                otherManagers.forEach(manager => {
+                    if (manager && typeof manager.refreshExclusiveStatus === "function") {
+                        manager.refreshExclusiveStatus();
+                    }
+                });
+            }
+
+            async function onFileSelected(event) {
+                const file = event.target.files && event.target.files[0];
+                await processFile(file);
+                event.target.value = "";
+            }
+
+            async function processFile(file) {
+                if (!file) {
+                    return;
+                }
+
+                resetState();
+
+                try {
+                    let content;
+                    if (typeof file.text === "function") {
+                        content = await file.text();
+                    } else {
+                        content = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsText(file);
+                        });
+                    }
+
+                    const result = extractOIDataFromCSV(content);
+                    if (!result || result.order.length === 0) {
+                        throw new Error("檔案中沒有找到有效的 Open Interest 資料。");
+                    }
+
+                    gammaDatasets = result.datasets;
+                    expiryOrder = result.order;
+                    currentFileName = file.name;
+                    currentSymbol = result.symbol || "";
+
+                    fileLabel.textContent = `載入檔案：${file.name}${currentSymbol ? `｜標的：${currentSymbol}` : ""
+                        }`;
+                    warningLabel.textContent = "";
+
+                    renderExpiryButtons(expiryOrder);
+                    if (expiryOrder.length > 0) {
+                        selectExpiry(expiryOrder[0]);
+                    } else {
+                        infoLabel.textContent = "無可用的到期日資料。";
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert(`解析失敗：${error.message}`);
+                    resetState();
+                }
+            }
+
+            function renderExpiryButtons(expiries) {
+                expiryButtonContainer.innerHTML = "";
+                buttonMap.clear();
+                expiries.forEach((expiry) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "expiry-button";
+                    button.textContent = expiry;
+                    button.addEventListener("click", () => selectExpiry(expiry));
+                    expiryButtonContainer.appendChild(button);
+                    buttonMap.set(expiry, button);
+                });
+                if (expiries.length > 0) {
+                    updateActiveButton(expiries[0]);
+                }
+                updateExclusiveStatus();
+                otherManagers.forEach(manager => {
+                    if (manager && typeof manager.refreshExclusiveStatus === "function") {
+                        manager.refreshExclusiveStatus();
+                    }
+                });
+            }
+
+            function updateActiveButton(targetExpiry) {
+                Array.from(expiryButtonContainer.children).forEach((button) => {
+                    if (button.textContent === targetExpiry) {
+                        button.classList.add("active");
+                    } else {
+                        button.classList.remove("active");
+                    }
+                });
+            }
+
+            function selectExpiry(expiry, options = {}) {
+                const { suppressSync = false } = options;
+                if (!gammaDatasets[expiry]) {
+                    console.warn(`找不到到期日 ${expiry} 的資料。`);
+                    return;
+                }
+                currentExpiry = expiry;
+                updateActiveButton(expiry);
+                renderChart(expiry, gammaDatasets[expiry]);
+                updateSummaryLabels(expiry, gammaDatasets[expiry]);
+                emitSelectionChange({
+                    expiry,
+                    dataset: gammaDatasets[expiry],
+                    fileName: currentFileName,
+                    symbol: currentSymbol,
+                });
+
+                if (!suppressSync && otherManagers.length > 0) {
+                    otherManagers.forEach(manager => {
+                        if (manager) {
+                            const otherExpiryOrder = manager.getExpiryOrder();
+                            if (otherExpiryOrder && otherExpiryOrder.includes(expiry)) {
+                                manager.selectExpiry(expiry, { suppressSync: true });
+                            }
+                        }
+                    });
+                }
+            }
+
+            function renderChart(expiry, dataset) {
+                // 如果不顯示個別圖表，直接返回
+                if (!chartId || !document.getElementById(chartId)) {
+                    return;
+                }
+
+                if (typeof Plotly === "undefined") {
+                    alert("Plotly 尚未載入，請稍後再試。");
+                    return;
+                }
+
+                if (!Array.isArray(dataset) || dataset.length === 0) {
+                    Plotly.purge(chartId);
+                    warningLabel.textContent = `到期日 ${expiry} 沒有可視化的資料。`;
+                    return;
+                }
+
+                const sortedData = dataset.slice().sort((a, b) => a.price - b.price);
+                const strikes = sortedData.map((item) => item.price);
+                const gammaMillions = sortedData.map((item) => item.gamma / 1_000_000);
+                const hoverTexts = sortedData.map((item, index) => {
+                    const gammaLabel = formatSignedMillion(gammaMillions[index]);
+                    return `${formatNumber(item.price)} | ${gammaLabel}M`;
+                });
+
+                const fillColors = gammaMillions.map((value) =>
+                    value >= 0 ? POSITIVE_FILL : NEGATIVE_FILL
+                );
+                const borderColors = gammaMillions.map((value) =>
+                    value >= 0 ? POSITIVE_BORDER : NEGATIVE_BORDER
+                );
+
+                const maxAbs = Math.max(...gammaMillions.map((value) => Math.abs(value)));
+                const axisMax = maxAbs === 0 ? 1 : maxAbs * 1.1;
+
+                const trace = {
+                    x: gammaMillions,
+                    y: strikes,
+                    type: "bar",
+                    orientation: "h",
+                    marker: {
+                        color: fillColors,
+                        line: { color: borderColors, width: 1 },
+                    },
+                    hovertemplate: "%{text}<extra></extra>",
+                    text: hoverTexts,
+                    name: `Gamma | ${expiry}`,
+                    showlegend: false,
+                };
+
+                const titlePrefix = currentSymbol ? `${currentSymbol}｜` : "";
+
+                const displayFileName = currentFileName ? stripFileExtension(currentFileName) : "";
+
+                const layout = {
+                    title: {
+                        text: `${titlePrefix}Dealer Gamma Distribution | ${expiry}`,
+                        font: { size: 14, color: "#333" },
+                    },
+                    xaxis: {
+                        title: "Gamma (Million)",
+                        zeroline: true,
+                        zerolinecolor: "#333",
+                        showgrid: true,
+                        gridcolor: "#e0e0e0",
+                        range: [-axisMax, axisMax],
+                        tickfont: { size: 12 },
+                    },
+                    yaxis: {
+                        title: "Strike",
+                        tickfont: { size: 12 },
+                        showgrid: true,
+                        gridcolor: "#e0e0e0",
+                        automargin: true,
+                    },
+                    plot_bgcolor: "white",
+                    paper_bgcolor: "white",
+                    margin: { l: 60, r: 20, t: 40, b: 60 },
+                    annotations: currentFileName
+                        ? [
+                            {
+                                text: displayFileName,
+                                xref: "paper",
+                                yref: "paper",
+                                x: 0.98,
+                                y: 0.02,
+                                xanchor: "right",
+                                yanchor: "bottom",
+                                showarrow: false,
+                                font: { size: 10 },
+                                bgcolor: "rgba(255,255,255,0.75)",
+                                bordercolor: "#ccc",
+                                borderwidth: 0,
+                                borderpad: 4,
+                            },
+                        ]
+                        : [],
+                };
+
+                const config = {
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ["lasso2d", "select2d"],
+                    toImageButtonOptions: {
+                        format: 'png',
+                        filename: `${currentSymbol || ''}_${expiry}_gamma`,
+                        height: 1080,
+                        width: 1920,
+                        scale: 2
+                    }
+                };
+
+                Plotly.react(chartId, [trace], layout, config);
+            }
+
+            function updateSummaryLabels(expiry, dataset) {
+                if (!Array.isArray(dataset) || dataset.length === 0) {
+                    infoLabel.textContent = `到期日 ${expiry} 沒有資料`;
+                    warningLabel.textContent = "";
+                    return;
+                }
+
+                const strikes = dataset.map((item) => item.price);
+                const minStrike = Math.min(...strikes);
+                const maxStrike = Math.max(...strikes);
+                const totalGammaMillions =
+                    dataset.reduce((sum, item) => sum + item.gamma, 0) / 1_000_000;
+
+                infoLabel.textContent = `到期日：${expiry}｜到期日數量：${expiryOrder.length}｜點位數量：${dataset.length}｜價格範圍：${formatNumber(
+                    minStrike
+                )} ~ ${formatNumber(maxStrike)}`;
+                // warningLabel.textContent = `Gamma 總和：${formatSignedMillion(
+                //     totalGammaMillions
+                // )}M`;
+            }
+
+            function emitSelectionChange(payload) {
+                if (typeof onSelectionChange === "function") {
+                    onSelectionChange(key, payload);
+                }
+            }
+
+            function updateExclusiveStatus() {
+                // 收集所有其他manager的到期日列表
+                const allOtherExpiryLists = [];
+                otherManagers.forEach(manager => {
+                    if (manager) {
+                        const order = manager.getExpiryOrder();
+                        if (order && order.length > 0) {
+                            allOtherExpiryLists.push(new Set(order));
+                        }
+                    }
+                });
+
+                // 如果其他manager少於5個（總共6個，減去自己），說明有些還沒載入
+                // 這種情況下，只要在其他已載入的manager中存在就顯示正常顏色
+                if (allOtherExpiryLists.length < 5) {
+                    const allOtherExpiries = new Set();
+                    allOtherExpiryLists.forEach(expirySet => {
+                        expirySet.forEach(expiry => allOtherExpiries.add(expiry));
+                    });
+                    buttonMap.forEach((button, expiry) => {
+                        if (allOtherExpiries.size > 0 && allOtherExpiries.has(expiry)) {
+                            button.classList.remove("exclusive");
+                        } else {
+                            button.classList.add("exclusive");
+                        }
+                    });
+                    return;
+                }
+
+                // 所有6個OI都已載入，檢查每個到期日是否在所有6個OI中都存在
+                const currentExpirySet = new Set(expiryOrder);
+                buttonMap.forEach((button, expiry) => {
+                    // 檢查這個到期日是否在當前OI中存在
+                    if (!currentExpirySet.has(expiry)) {
+                        button.classList.add("exclusive");
+                        return;
+                    }
+
+                    // 檢查這個到期日是否在所有其他5個OI中都存在
+                    const existsInAll = allOtherExpiryLists.every(expirySet => expirySet.has(expiry));
+
+                    if (existsInAll) {
+                        // 在所有6個OI中都存在，顯示正常顏色
+                        button.classList.remove("exclusive");
+                    } else {
+                        // 不是所有6個OI都有，顯示不同顏色
+                        button.classList.add("exclusive");
+                    }
+                });
+            }
+
+            // 返回公開方法
+            return {
+                setOtherManager: (manager) => {
+                    if (manager && !otherManagers.includes(manager)) {
+                        otherManagers.push(manager);
+                        updateExclusiveStatus();
+                    }
+                },
+                addOtherManager: (manager) => {
+                    if (manager && !otherManagers.includes(manager)) {
+                        otherManagers.push(manager);
+                        updateExclusiveStatus();
+                    }
+                },
+                selectExpiry: (expiry, options) => {
+                    selectExpiry(expiry, options);
+                },
+                getExpiryOrder: () => {
+                    return expiryOrder;
+                },
+                refreshExclusiveStatus: () => {
+                    updateExclusiveStatus();
+                },
+                reset: () => {
+                    resetState();
+                },
+            };
+        }
+
+        function createComparisonManager({ chartId, combinedChartId, infoLabelId, warningLabelId, dataset1Key, dataset2Key }) {
+            const infoLabel = infoLabelId ? document.getElementById(infoLabelId) : null;
+            const warningLabel = warningLabelId ? document.getElementById(warningLabelId) : null;
+            const titleElement = document.getElementById("chartTitle");
+            const diffChartElement = chartId ? document.getElementById(chartId) : null;
+            const hasDiffChart = !!diffChartElement;
+            const state = {};
+            const key1 = dataset1Key || "html1";
+            const key2 = dataset2Key || "html2";
+
+            function handleSelectionChange(key, payload) {
+                // 只處理相關的key
+                if (key === key1 || key === key2) {
+                    state[key] = payload;
+                    updateComparisonChart();
+                }
+            }
+
+            function updateChartTitle() {
+                if (!titleElement) {
+                    return;
+                }
+                const symbol1 = state[key1]?.symbol || "";
+                const symbol2 = state[key2]?.symbol || "";
+                let displaySymbol = symbol2 || symbol1 || "";
+                if (symbol1 && symbol2 && symbol1 !== symbol2) {
+                    displaySymbol = "";
+                }
+                titleElement.textContent = displaySymbol;
+            }
+
+            function updateComparisonChart() {
+                updateChartTitle();
+
+                const dataset1 = state[key1];
+                const dataset2 = state[key2];
+
+                // 檢查是否至少有一個數據集已載入
+                const hasDataset1 = dataset1 && dataset1.dataset;
+                const hasDataset2 = dataset2 && dataset2.dataset;
+
+                if (!hasDataset1 && !hasDataset2) {
+                    if (infoLabel) {
+                        infoLabel.textContent = "請載入並選擇至少一個檔案的到期日。";
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "";
+                    }
+                    purgeChart();
+                    purgeCombinedChart();
+                    return;
+                }
+
+                // 如果只有一個數據集，直接顯示
+                if (hasDataset1 && !hasDataset2) {
+                    renderCombinedChart(dataset1, null);
+                    if (infoLabel) {
+                        const key1Label = key1.toUpperCase();
+                        infoLabel.textContent = `${key1Label}：${dataset1.expiry ?? "未選擇"}`;
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "";
+                    }
+                    purgeChart();
+                    return;
+                }
+
+                if (!hasDataset1 && hasDataset2) {
+                    renderCombinedChart(null, dataset2);
+                    if (infoLabel) {
+                        const key2Label = key2.toUpperCase();
+                        infoLabel.textContent = `${key2Label}：${dataset2.expiry ?? "未選擇"}`;
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "";
+                    }
+                    purgeChart();
+                    return;
+                }
+
+                // 兩個數據集都已載入，檢查到期日是否相同
+                if (dataset1.expiry !== dataset2.expiry) {
+                    if (infoLabel) {
+                        infoLabel.textContent = `${key1.toUpperCase()}：${dataset1.expiry ?? "未選擇"}｜${key2.toUpperCase()}：${dataset2.expiry ?? "未選擇"
+                            }`;
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "請選擇相同到期日以顯示差值。";
+                    }
+                    purgeChart();
+                    purgeCombinedChart();
+                    return;
+                }
+
+                const symbol1 = dataset1.symbol || "";
+                const symbol2 = dataset2.symbol || "";
+                if (!symbol1 || !symbol2 || symbol1 !== symbol2) {
+                    if (infoLabel) {
+                        infoLabel.textContent = `${key1.toUpperCase()} 標的：${symbol1 || "未知"}｜${key2.toUpperCase()} 標的：${symbol2 || "未知"
+                            }`;
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "請選擇相同標的以顯示差值。";
+                    }
+                    updateChartTitle();
+                    purgeChart();
+                    purgeCombinedChart();
+                    return;
+                }
+
+                renderCombinedChart(dataset1, dataset2);
+
+                const diffPoints = buildDifferenceDataset(dataset1.dataset, dataset2.dataset);
+                if (diffPoints.length === 0) {
+                    if (infoLabel) {
+                        infoLabel.textContent = `比較到期日：${dataset2.expiry}｜兩份資料沒有差異。`;
+                    }
+                    if (warningLabel) {
+                        warningLabel.textContent = "";
+                    }
+                    purgeChart();
+                    return;
+                }
+
+                const strikes = diffPoints.map((point) => point.price);
+                const diffMillions = diffPoints.map((point) => point.diff / 1_000_000);
+                const absMillions = diffPoints.map((point) => Math.abs(point.diff) / 1_000_000);
+                const fillColors = diffMillions.map((value) =>
+                    value >= 0 ? POSITIVE_FILL : NEGATIVE_FILL
+                );
+                const borderColors = diffMillions.map((value) =>
+                    value >= 0 ? POSITIVE_BORDER : NEGATIVE_BORDER
+                );
+                const texts = diffPoints.map((point, index) => {
+                    const diffLabel = formatSignedMillion(diffMillions[index]);
+                    return `${formatNumber(point.price)} | ${diffLabel}M`;
+                });
+                const maxAbs = Math.max(...absMillions);
+                const axisMax = maxAbs === 0 ? 1 : maxAbs * 1.1;
+                const totalDiff = diffMillions.reduce((sum, value) => sum + value, 0);
+
+                const trace = {
+                    x: absMillions,
+                    y: strikes,
+                    type: "bar",
+                    orientation: "h",
+                    marker: {
+                        color: fillColors,
+                        line: { color: borderColors, width: 1 },
+                    },
+                    hovertemplate: "%{text}<extra></extra>",
+                    text: texts,
+                    name: "Diff",
+                    showlegend: false,
+                };
+
+                const symbolPrefix = dataset2.symbol ? `${dataset2.symbol}｜` : "";
+                const key1Label = key1.toUpperCase();
+                const key2Label = key2.toUpperCase();
+
+                const layout = {
+                    title: {
+                        text: `${symbolPrefix}Gamma Difference | ${dataset2.expiry}`,
+                        font: { size: 14, color: "#333" },
+                    },
+                    xaxis: {
+                        title: `Gamma (${key2Label} - ${key1Label}, Million)`,
+                        range: [0, axisMax],
+                        showgrid: true,
+                        zeroline: false,
+                        tickfont: { size: 12 },
+                    },
+                    yaxis: {
+                        title: "Strike",
+                        automargin: true,
+                        showgrid: true,
+                        gridcolor: "#e0e0e0",
+                        tickfont: { size: 12 },
+                    },
+                    plot_bgcolor: "white",
+                    paper_bgcolor: "white",
+                    margin: { l: 60, r: 20, t: 40, b: 60 },
+                    annotations: [
+                        {
+                            text: `${key2Label}: ${stripFileExtension(dataset2.fileName || "未知")}`,
+                            xref: "paper",
+                            yref: "paper",
+                            x: 0.98,
+                            y: 0.06,
+                            xanchor: "right",
+                            yanchor: "bottom",
+                            showarrow: false,
+                            font: { size: 10 },
+                            bgcolor: "rgba(255,255,255,0.75)",
+                            bordercolor: "#ccc",
+                            borderwidth: 0,
+                            borderpad: 4,
+                        },
+                        {
+                            text: `${key1Label}: ${stripFileExtension(dataset1.fileName || "未知")}`,
+                            xref: "paper",
+                            yref: "paper",
+                            x: 0.98,
+                            y: 0.02,
+                            xanchor: "right",
+                            yanchor: "bottom",
+                            showarrow: false,
+                            font: { size: 10, },
+                            bgcolor: "rgba(255,255,255,0.75)",
+                            bordercolor: "#ccc",
+                            borderwidth: 0,
+                            borderpad: 4,
+                        },
+                    ],
+                };
+
+                const config = {
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ["lasso2d", "select2d"],
+                    toImageButtonOptions: {
+                        format: 'png',
+                        filename: `${dataset2.symbol || ''}_${dataset2.expiry}_diff`,
+                        height: 1080,
+                        width: 1920,
+                        scale: 2
+                    }
+                };
+
+                if (infoLabel) {
+                    infoLabel.textContent = `比較到期日：${dataset2.expiry}（${key2Label} - ${key1Label}）`;
+                }
+                if (warningLabel) {
+                    warningLabel.textContent = `差值筆數：${diffPoints.length}｜總差值：${formatSignedMillion(
+                        totalDiff
+                    )}M`;
+                }
+
+                if (hasDiffChart) {
+                    Plotly.react(diffChartElement, [trace], layout, config);
+                }
+            }
+
+            function purgeChart() {
+                if (typeof Plotly === "undefined") {
+                    return;
+                }
+                const target =
+                    diffChartElement || (chartId ? document.getElementById(chartId) : null);
+                if (target) {
+                    Plotly.purge(target);
+                }
+            }
+
+            function purgeCombinedChart() {
+                if (typeof Plotly !== "undefined" && combinedChartId && document.getElementById(combinedChartId)) {
+                    Plotly.purge(combinedChartId);
+                }
+            }
+
+            function renderCombinedChart(dataset1, dataset2) {
+                if (typeof Plotly === "undefined" || !combinedChartId) {
+                    return;
+                }
+                const targetElement = document.getElementById(combinedChartId);
+                if (!targetElement) {
+                    return;
+                }
+
+                // 處理只有一個數據集的情況
+                const hasDataset1 = dataset1 && dataset1.dataset;
+                const hasDataset2 = dataset2 && dataset2.dataset;
+
+                if (!hasDataset1 && !hasDataset2) {
+                    Plotly.purge(combinedChartId);
+                    return;
+                }
+
+                // 建立價格映射 - 分別處理 Call 和 Put
+                const callMap1 = hasDataset1 ? new Map(dataset1.dataset.map((item) => [item.price, item.call || 0])) : new Map();
+                const putMap1 = hasDataset1 ? new Map(dataset1.dataset.map((item) => [item.price, item.put || 0])) : new Map();
+                const callMap2 = hasDataset2 ? new Map(dataset2.dataset.map((item) => [item.price, item.call || 0])) : new Map();
+                const putMap2 = hasDataset2 ? new Map(dataset2.dataset.map((item) => [item.price, item.put || 0])) : new Map();
+
+                const allPrices = Array.from(new Set([
+                    ...callMap1.keys(), ...putMap1.keys(),
+                    ...callMap2.keys(), ...putMap2.keys()
+                ])).sort((a, b) => a - b);
+
+                if (allPrices.length === 0) {
+                    Plotly.purge(combinedChartId);
+                    return;
+                }
+
+                // 準備 Call 和 Put 的資料
+                const call1 = allPrices.map((price) => (callMap1.get(price) ?? 0));
+                const put1 = allPrices.map((price) => (putMap1.get(price) ?? 0));
+                const call2 = allPrices.map((price) => (callMap2.get(price) ?? 0));
+                const put2 = allPrices.map((price) => (putMap2.get(price) ?? 0));
+
+                const key1Label = (dataset1Key || "csv1").toUpperCase();
+                const key2Label = (dataset2Key || "csv2").toUpperCase();
+
+                // Hover texts for Call and Put
+                const hoverCall1 = allPrices.map((price, index) =>
+                    `${formatNumber(price)} | Call OI: ${formatSignedMillion(call1[index])} (${key1Label})`);
+                const hoverPut1 = allPrices.map((price, index) =>
+                    `${formatNumber(price)} | Put OI: ${formatSignedMillion(-put1[index])} (${key1Label})`);
+                const hoverCall2 = allPrices.map((price, index) =>
+                    `${formatNumber(price)} | Call OI: ${formatSignedMillion(call2[index])} (${key2Label})`);
+                const hoverPut2 = allPrices.map((price, index) =>
+                    `${formatNumber(price)} | Put OI: ${formatSignedMillion(-put2[index])} (${key2Label})`);
+
+                const maxAbs = Math.max(
+                    ...call1.map((value) => Math.abs(value)),
+                    ...put1.map((value) => Math.abs(value)),
+                    ...call2.map((value) => Math.abs(value)),
+                    ...put2.map((value) => Math.abs(value))
+                );
+
+                const axisMax = maxAbs === 0 ? 1 : maxAbs * 1.1;
+
+                const legendName1 = hasDataset1 && dataset1.fileName ? stripFileExtension(dataset1.fileName) : key1Label;
+                const legendName2 = hasDataset2 && dataset2.fileName ? stripFileExtension(dataset2.fileName) : key2Label;
+
+                const textCall1 = allPrices.map((price, index) => {
+                    return Math.abs(call1[index]) >= Math.abs(call2[index]) ? `${formatNumber(price)}` : ``;
+                });
+                const textCall2 = allPrices.map((price, index) => {
+                    return Math.abs(call1[index]) <= Math.abs(call2[index]) ? `${formatNumber(price)}` : ``;
+                });
+                const textPut1 = allPrices.map((price, index) => {
+                    return Math.abs(put1[index]) >= Math.abs(put2[index]) ? `${formatNumber(price)}` : ``;
+                });
+                const textPut2 = allPrices.map((price, index) => {
+                    return Math.abs(put1[index]) <= Math.abs(put2[index]) ? `${formatNumber(price)}` : ``;
+                });
+
+                // 準備要顯示的traces - 分別顯示 Call 和 Put
+                const traces = [];
+
+                // CSV2 Put (純紅色)
+                if (hasDataset2) {
+                    traces.push({
+                        x: put2,
+                        y: allPrices,
+                        type: "bar",
+                        orientation: "h",
+                        marker: {
+                            color: NEGATIVE_FILL,
+                            line: { color: NEGATIVE_BORDER, width: 1.5 },
+                        },
+                        customdata: hoverPut2,
+                        hovertemplate: "%{customdata}<extra></extra>",
+                        text: textPut2,
+                        name: `${legendName2} Put`,
+                    });
+                }
+
+                // CSV2 Call (純綠色)
+                if (hasDataset2) {
+                    traces.push({
+                        x: call2,
+                        y: allPrices,
+                        type: "bar",
+                        orientation: "h",
+                        marker: {
+                            color: POSITIVE_FILL,
+                            line: { color: POSITIVE_BORDER, width: 1.5 },
+                        },
+                        customdata: hoverCall2,
+                        hovertemplate: "%{customdata}<extra></extra>",
+                        text: textCall2,
+                        name: `${legendName2} Call`,
+                    });
+                }
+
+                // CSV1 Put - 根據是否有 CSV2 決定樣式
+                if (hasDataset1) {
+                    const put1Trace = {
+                        x: put1,
+                        y: allPrices,
+                        type: "bar",
+                        orientation: "h",
+                        marker: {
+                            color: NEGATIVE_FILL,
+                            line: { color: NEGATIVE_BORDER, width: 1.5 },
+                        },
+                        customdata: hoverPut1,
+                        hovertemplate: "%{customdata}<extra></extra>",
+                        text: textPut1,
+                        name: `${legendName1} Put`,
+                    };
+
+                    // 如果有 CSV2，給 CSV1 加斜線
+                    if (hasDataset2) {
+                        put1Trace.marker.color = OI1_FILL;
+                        put1Trace.marker.line.color = OI1_BORDER;  // ← 加這行！
+                        put1Trace.marker.line.width = 0.8;
+                        put1Trace.marker.pattern = {
+                            shape: "/",
+                            size: 2,
+                            fgcolor: OI1_BORDER,
+                            solidity: 0.2,
+                        };
+                        put1Trace.opacity = 1;
+                    }
+
+                    traces.push(put1Trace);
+                }
+
+                // CSV1 Call - 根據是否有 CSV2 決定樣式
+                if (hasDataset1) {
+                    const call1Trace = {
+                        x: call1,
+                        y: allPrices,
+                        type: "bar",
+                        orientation: "h",
+                        marker: {
+                            color: POSITIVE_FILL,
+                            line: { color: POSITIVE_BORDER, width: 1.5 },
+                        },
+                        customdata: hoverCall1,
+                        hovertemplate: "%{customdata}<extra></extra>",
+                        text: textCall1,
+                        name: `${legendName1} Call`,
+                    };
+
+                    // 如果有 CSV2，給 CSV1 加斜線
+                    if (hasDataset2) {
+                        call1Trace.marker.color = OI1_FILL;
+                        call1Trace.marker.line.color = OI1_BORDER;  // ← 加這行！
+                        call1Trace.marker.line.width = 0.8;
+                        call1Trace.marker.pattern = {
+                            shape: "/",
+                            size: 2,
+                            fgcolor: OI1_BORDER,
+                            solidity: 0.2,
+                        };
+                        call1Trace.opacity = 1;
+                    }
+
+                    traces.push(call1Trace);
+                }
+
+                // 決定標題
+                let titleText;
+                if (hasDataset1 && hasDataset2) {
+                    const symbol = dataset2.symbol || dataset1.symbol || "";
+                    const expiry = dataset2.expiry || dataset1.expiry || "";
+                    titleText = `${symbol ? `${symbol}｜` : ""}OI Difference Overlay (${key2Label} - ${key1Label}) | ${expiry}`;
+                } else if (hasDataset2) {
+                    const symbol = dataset2.symbol || "";
+                    titleText = `${symbol ? `${symbol}｜` : ""}${key2Label} OI Distribution | ${dataset2.expiry}`;
+                } else {
+                    const symbol = dataset1.symbol || "";
+                    titleText = `${symbol ? `${symbol}｜` : ""}${key1Label} OI Distribution | ${dataset1.expiry}`;
+                }
+
+                const layout = {
+                    title: {
+                        text: titleText,
+                        font: { size: 14, color: "#333" },
+                    },
+                    xaxis: {
+                        title: "Open Interest",
+                        zeroline: true,
+                        zerolinecolor: "#333",
+                        range: [-axisMax, axisMax],
+                        showgrid: true,
+                        gridcolor: "#e0e0e0",
+                        tickfont: { size: 12 },
+                    },
+                    yaxis: {
+                        title: "Strike",
+                        automargin: true,
+                        showgrid: true,
+                        gridcolor: "#e0e0e0",
+                        tickfont: { size: 12 },
+                        // nticks: 10,
+                    },
+                    barmode: "overlay",
+                    showlegend: true,
+                    legend: {
+                        orientation: "v",
+                        x: 0.98,
+                        y: 0.02,
+                        xanchor: "right",
+                        yanchor: "bottom",
+                        font: { size: 10 },
+                        itemwidth: 80,
+                        bgcolor: "rgba(255,255,255,0.75)",
+                        bordercolor: "#ccc",
+                        borderwidth: 0,
+                    },
+                    plot_bgcolor: "white",
+                    paper_bgcolor: "white",
+                    margin: { l: 60, r: 20, t: 40, b: 60 },
+                    height: 660,
+                };
+
+                const expiry = (hasDataset2 ? dataset2.expiry : dataset1.expiry) || '';
+                const symbol = (hasDataset2 ? dataset2.symbol : dataset1.symbol) || '';
+                const config = {
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ["lasso2d", "select2d"],
+                    toImageButtonOptions: {
+                        format: 'png',
+                        filename: `${symbol}_${expiry}_${hasDataset1 && hasDataset2 ? 'diff_overlay' : 'oi'}`,
+                        height: 1080,
+                        width: 1920,
+                        scale: 2
+                    }
+                };
+
+                Plotly.react(combinedChartId, traces, layout, config);
+            }
+
+            return {
+                handleSelectionChange,
+            };
+        }
+
+        function buildDifferenceDataset(dataset1, dataset2) {
+            const map1 = new Map(dataset1.map((item) => [item.price, item.gamma]));
+            const map2 = new Map(dataset2.map((item) => [item.price, item.gamma]));
+            const allPrices = Array.from(new Set([...map1.keys(), ...map2.keys()])).sort(
+                (a, b) => a - b
+            );
+
+            return allPrices
+                .map((price) => {
+                    const gamma1 = map1.get(price) ?? 0;
+                    const gamma2 = map2.get(price) ?? 0;
+                    const diff = gamma2 - gamma1;
+                    return { price, diff };
+                })
+                .filter((point) => point.diff !== 0);
+        }
+
+        function extractLayoutTitle(layout = {}) {
+            if (!layout) {
+                return null;
+            }
+            if (typeof layout.title === "string") {
+                return layout.title;
+            }
+            if (layout.title && typeof layout.title.text === "string") {
+                return layout.title.text;
+            }
+            return null;
+        }
+
+        function extractSymbolFromTitle(title) {
+            if (!title || typeof title !== "string") {
+                return null;
+            }
+            const trimmed = title.trim();
+            const match = trimmed.match(/^([A-Za-z0-9._-]+)/);
+            if (match) {
+                return match[1].toUpperCase();
+            }
+            return trimmed;
+        }
+
+        function extractOIDataFromCSV(csvContent) {
+            // Parse CSV content
+            const lines = csvContent.trim().split('\n');
+            if (lines.length < 2) {
+                throw new Error('CSV 檔案格式錯誤：沒有足夠的資料行');
+            }
+
+            // Parse header
+            const header = lines[0].split(',').map(h => h.trim());
+            const timestampIdx = header.indexOf('timestamp');
+            const symbolIdx = header.indexOf('symbol');
+            const expirationIdx = header.indexOf('expiration');
+            const strikeIdx = header.indexOf('strike');
+            const rightIdx = header.indexOf('right');
+            const oiIdx = header.indexOf('open_interest');
+
+            if (symbolIdx === -1 || expirationIdx === -1 || strikeIdx === -1 || rightIdx === -1 || oiIdx === -1) {
+                throw new Error('CSV 檔案缺少必要欄位：symbol, expiration, strike, right, open_interest');
+            }
+
+            // Parse data rows
+            const expiryDataMap = new Map();
+            let symbol = '';
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const cols = line.split(',').map(c => c.trim());
+                if (cols.length < header.length) continue;
+
+                const rowSymbol = cols[symbolIdx];
+                const expiration = cols[expirationIdx];
+                const strike = parseFloat(cols[strikeIdx]);
+                const right = cols[rightIdx].toUpperCase();
+                const oi = parseFloat(cols[oiIdx]) || 0;
+
+                // Extract symbol from first row
+                if (!symbol && rowSymbol) {
+                    symbol = rowSymbol;
+                }
+
+                // Skip invalid data
+                if (isNaN(strike) || !expiration || !right) continue;
+
+                // Initialize expiry map if needed
+                if (!expiryDataMap.has(expiration)) {
+                    expiryDataMap.set(expiration, new Map());
+                }
+
+                const priceMap = expiryDataMap.get(expiration);
+
+                // Get or initialize strike data
+                if (!priceMap.has(strike)) {
+                    priceMap.set(strike, { call: 0, put: 0 });
+                }
+
+                const strikeData = priceMap.get(strike);
+
+                // Accumulate OI: Call = positive, Put = negative
+                if (right === 'CALL') {
+                    strikeData.call += oi;
+                } else if (right === 'PUT') {
+                    strikeData.put += oi;
+                }
+            }
+
+            // Convert to output format
+            const datasets = {};
+            const orderedEntries = Array.from(expiryDataMap.entries())
+                .map(([expiry, priceMap]) => {
+                    const points = Array.from(priceMap.entries())
+                        .map(([price, data]) => ({
+                            price: price,
+                            gamma: data.call - data.put,  // Net OI (for compatibility)
+                            call: data.call,   // Call OI (positive)
+                            put: -data.put     // Put OI (negative for display)
+                        }))
+                        .sort((a, b) => a.price - b.price);
+                    return { expiry, points };
+                })
+                .filter((entry) => entry.points.length > 0)
+                .sort((a, b) => compareExpiryLabel(a.expiry, b.expiry));
+
+            orderedEntries.forEach((entry) => {
+                datasets[entry.expiry] = entry.points;
+            });
+
+            return {
+                datasets,
+                order: orderedEntries.map((entry) => entry.expiry),
+                title: `${symbol} Open Interest`,
+                symbol: symbol || '',
+            };
+        }
+
+        function parsePlotlyArguments(argumentString) {
+            const args = [];
+            let current = "";
+            let depth = 0;
+            let inQuotes = false;
+            let quoteChar = "";
+
+            for (let i = 0; i < argumentString.length; i++) {
+                const char = argumentString[i];
+                const prevChar = argumentString[i - 1];
+
+                if ((char === "'" || char === '"') && prevChar !== "\\") {
+                    if (inQuotes && char === quoteChar) {
+                        inQuotes = false;
+                        quoteChar = "";
+                    } else if (!inQuotes) {
+                        inQuotes = true;
+                        quoteChar = char;
+                    }
+                }
+
+                if (!inQuotes) {
+                    if (char === "{" || char === "[") {
+                        depth += 1;
+                    } else if (char === "}" || char === "]") {
+                        depth -= 1;
+                    } else if (char === "," && depth === 0) {
+                        pushArgument(current, args);
+                        current = "";
+                        continue;
+                    }
+                }
+
+                current += char;
+            }
+
+            if (current.trim().length > 0) {
+                pushArgument(current, args);
+            }
+
+            return args;
+        }
+
+        function pushArgument(raw, args) {
+            if (!raw) {
+                return;
+            }
+            const trimmed = raw.trim();
+            if (!trimmed) {
+                return;
+            }
+
+            if (
+                (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+                (trimmed.startsWith('"') && trimmed.endsWith('"'))
+            ) {
+                args.push(trimmed.slice(1, -1));
+                return;
+            }
+
+            const parsed = tryParseJsValue(trimmed);
+            if (parsed !== undefined) {
+                args.push(parsed);
+            } else {
+                console.warn("無法解析 Plotly 參數：", trimmed);
+                args.push(null);
+            }
+        }
+
+        function tryParseJsValue(source) {
+            try {
+                return JSON.parse(source);
+            } catch (error) {
+                try {
+                    const normalized = source
+                        .replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":')
+                        .replace(/'/g, '"');
+                    return JSON.parse(normalized);
+                } catch (jsonError) {
+                    try {
+                        // 評估為 JavaScript 表達式（封裝在函式中避免汙染作用域）
+                        // 僅用於離線檔案解析，不執行函式/語句，只回傳值
+                        // eslint-disable-next-line no-new-func
+                        const evaluator = new Function(`"use strict"; return (${source});`);
+                        return evaluator();
+                    } catch (evalError) {
+                        return undefined;
+                    }
+                }
+            }
+        }
+
+        function simulatePlotlyScript(scriptText) {
+            const capturedCalls = [];
+            const capturedFrames = [];
+            const fakePlotly = {
+                newPlot: (...args) => {
+                    capturedCalls.push(args);
+                    return {};
+                },
+                addFrames: (divId, frames) => {
+                    capturedFrames.push({ divId, frames });
+                },
+            };
+            const fakeDocument = {
+                getElementById: () => ({}),
+                querySelector: () => ({}),
+            };
+            const fakeWindow = {};
+
+            // eslint-disable-next-line no-new-func
+            const runner = new Function("Plotly", "document", "window", `"use strict";\n${scriptText}`);
+            runner(fakePlotly, fakeDocument, fakeWindow);
+
+            return { calls: capturedCalls, frames: capturedFrames };
+        }
+
+        function resolveExpiryName(primaryLabel, layout, data, counter) {
+            const candidates = [
+                sanitizeLabel(primaryLabel),
+                inferExpiryFromLayout(layout),
+                inferExpiryFromData(data),
+            ].filter(Boolean);
+
+            if (candidates.length > 0) {
+                return candidates[0];
+            }
+
+            counter.value += 1;
+            return `未命名 ${counter.value}`;
+        }
+
+        function sanitizeLabel(label) {
+            if (!label || typeof label !== "string") {
+                return null;
+            }
+            const date = extractDateFromText(label);
+            return date || label.trim();
+        }
+
+        function inferExpiryFromLayout(layout = {}) {
+            if (!layout) {
+                return null;
+            }
+
+            const titleText =
+                typeof layout.title === "string"
+                    ? layout.title
+                    : layout.title && layout.title.text;
+            const titleDate = extractDateFromText(titleText);
+            if (titleDate) {
+                return titleDate;
+            }
+
+            if (Array.isArray(layout.annotations)) {
+                for (const annotation of layout.annotations) {
+                    const date = extractDateFromText(annotation?.text);
+                    if (date) {
+                        return date;
+                    }
+                }
+            }
+
+            if (Array.isArray(layout.sliders)) {
+                for (const slider of layout.sliders) {
+                    const currentValue = slider?.currentvalue?.prefix;
+                    const date = extractDateFromText(currentValue);
+                    if (date) {
+                        return date;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function inferExpiryFromData(data = []) {
+            if (!Array.isArray(data)) {
+                return null;
+            }
+            for (const trace of data) {
+                const date =
+                    extractDateFromText(trace?.name) ||
+                    extractDateFromText(trace?.legendgroup) ||
+                    extractDateFromText(trace?.hovertemplate);
+                if (date) {
+                    return date;
+                }
+            }
+            return null;
+        }
+
+        function accumulateBarTraces(traces, expiryHint, targetMap) {
+            if (!Array.isArray(traces)) {
+                return;
+            }
+            traces
+                .filter((trace) => trace && trace.type === "bar")
+                .forEach((trace) => {
+                    const traceExpiry = detectExpiryFromTrace(trace) || expiryHint || "未命名";
+                    if (!targetMap.has(traceExpiry)) {
+                        targetMap.set(traceExpiry, new Map());
+                    }
+                    const priceMap = targetMap.get(traceExpiry);
+
+                    const orientation = trace.orientation === "h" ? "h" : "v";
+                    const priceArray = orientation === "h" ? trace.y : trace.x;
+                    const gammaArray = orientation === "h" ? trace.x : trace.y;
+
+                    if (!Array.isArray(priceArray) || !Array.isArray(gammaArray)) {
+                        return;
+                    }
+
+                    const length = Math.min(priceArray.length, gammaArray.length);
+                    for (let i = 0; i < length; i++) {
+                        const price = parseNumber(priceArray[i]);
+                        const gamma = parseNumber(gammaArray[i]);
+                        if (!Number.isFinite(price) || !Number.isFinite(gamma)) {
+                            continue;
+                        }
+                        const roundedPrice = Number(price.toFixed(4));
+                        priceMap.set(roundedPrice, (priceMap.get(roundedPrice) || 0) + gamma);
+                    }
+                });
+        }
+
+        function detectExpiryFromTrace(trace) {
+            if (!trace) {
+                return null;
+            }
+
+            const nameDate = extractDateFromText(trace.name);
+            if (nameDate) {
+                return nameDate;
+            }
+
+            const groupDate = extractDateFromText(trace.legendgroup);
+            if (groupDate) {
+                return groupDate;
+            }
+
+            if (Array.isArray(trace.customdata)) {
+                for (const entry of trace.customdata) {
+                    if (Array.isArray(entry)) {
+                        for (const value of entry) {
+                            const date = extractDateFromText(value);
+                            if (date) {
+                                return date;
+                            }
+                        }
+                    } else {
+                        const date = extractDateFromText(entry);
+                        if (date) {
+                            return date;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function parseNumber(value) {
+            if (typeof value === "number") {
+                return value;
+            }
+            if (typeof value === "string") {
+                const parsed = parseFloat(value.replace(/,/g, ""));
+                return Number.isFinite(parsed) ? parsed : NaN;
+            }
+            return NaN;
+        }
+
+        function compareExpiryLabel(a, b) {
+            const dateA = extractDateFromText(a);
+            const dateB = extractDateFromText(b);
+
+            if (dateA && dateB) {
+                return new Date(dateA) - new Date(dateB);
+            }
+            if (dateA) {
+                return -1;
+            }
+            if (dateB) {
+                return 1;
+            }
+            return a.localeCompare(b, "zh-Hant");
+        }
+
+        function extractDateFromText(text) {
+            if (!text || typeof text !== "string") {
+                return null;
+            }
+            const trimmed = text.trim();
+
+            const isoMatch = trimmed.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+            if (isoMatch) {
+                const [, year, month, day] = isoMatch;
+                return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+            }
+
+            const dmyMatch = trimmed.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+            if (dmyMatch) {
+                let [, month, day, year] = dmyMatch;
+                if (year.length === 2) {
+                    year = `20${year}`;
+                }
+                return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+            }
+
+            const textMatch = trimmed.match(/([A-Za-z]{3,})\s+(\d{1,2}),?\s*(\d{2,4})/);
+            if (textMatch) {
+                const [, monthText, day, yearText] = textMatch;
+                const month = monthNameToNumber(monthText);
+                if (month) {
+                    const year =
+                        yearText.length === 2 ? `20${yearText}` : yearText.padStart(4, "0");
+                    return `${year}-${month}-${day.padStart(2, "0")}`;
+                }
+            }
+
+            return null;
+        }
+
+        function monthNameToNumber(monthName) {
+            if (!monthName) {
+                return null;
+            }
+            const mapping = {
+                jan: "01",
+                feb: "02",
+                mar: "03",
+                apr: "04",
+                may: "05",
+                jun: "06",
+                jul: "07",
+                aug: "08",
+                sep: "09",
+                sept: "09",
+                oct: "10",
+                nov: "11",
+                dec: "12",
+            };
+            return mapping[monthName.slice(0, 3).toLowerCase()] || null;
+        }
+
+        function stripFileExtension(fileName) {
+            if (typeof fileName !== "string") {
+                return "";
+            }
+            const lastDot = fileName.lastIndexOf(".");
+            if (lastDot <= 0) {
+                return fileName;
+            }
+            return fileName.slice(0, lastDot);
+        }
+
+        function formatSignedMillion(value) {
+            const normalized = normalizeMillionValue(value);
+            return normalized > 0 ? `${normalized}` : `${normalized}`;
+        }
+
+        function normalizeMillionValue(value) {
+            if (!Number.isFinite(value)) {
+                return "0.00";
+            }
+            const abs = Math.abs(value);
+            let digits = 2;
+            if (abs >= 100) {
+                digits = 0;
+            } else if (abs >= 10) {
+                digits = 1;
+            }
+            const fixed = value.toFixed(digits);
+            return Number(fixed) === 0 ? "0.00" : fixed;
+        }
+
+        function formatNumber(value) {
+            if (!Number.isFinite(value)) {
+                return "--";
+            }
+            const abs = Math.abs(value);
+            const options =
+                abs >= 1000
+                    ? { maximumFractionDigits: 0 }
+                    : abs >= 100
+                        ? { maximumFractionDigits: 1 }
+                        : { maximumFractionDigits: 2 };
+            return value.toLocaleString("zh-TW", options);
+        }
+    </script>
+</body>
+
+</html>
