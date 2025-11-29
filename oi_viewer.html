@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OI Viewer</title>
-    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <!-- Google API Scripts -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -52,6 +54,10 @@
             background-color: #45a049;
         }
 
+        .fetch-button.drag-over {
+            background-color: #2e7d32;
+        }
+
         .chart-container {
             width: 100%;
             margin-top: 12px;
@@ -78,7 +84,7 @@
 <body>
     <div class="container">
         <div class="input-container">
-            <label for="csvFileInput1" id="fetchButton1" class="fetch-button">選擇 OI CSV 檔案</label>
+            <label for="csvFileInput1" id="fetchButton1" class="fetch-button">Open Interest CSV</label>
             <input type="file" id="csvFileInput1" accept=".csv" class="file-input">
         </div>
 
@@ -88,8 +94,179 @@
             <div id="chartOI" class="chart-wrapper"></div>
         </div>
     </div>
-
+    <!-- <div class="footer">Developed by Sepp</div> -->
+    <!-- Plotly.js from CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <script>
+        // ===== Google Drive API 設定 =====
+        const GOOGLE_CONFIG = {
+            CLIENT_ID: '1033958660645-45g683r139ike9j0s0viusf4prq72hh1.apps.googleusercontent.com',
+            API_KEY: 'AIzaSyCW-kR4HLNNIlIDBeIvCpXVxZDwof7Jq9s', // 需要從 Google Cloud Console 取得
+            SCOPES: 'https://www.googleapis.com/auth/drive.readonly',
+            DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            FOLDER_NAME: 'ThetaDataOI'
+        };
+
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+        let accessToken = null;
+        let pickerApiLoaded = false;
+        let currentPickerCallback = null;
+
+        // 初始化 Google API
+        function gapiLoaded() {
+            gapi.load('client:picker', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: GOOGLE_CONFIG.API_KEY,
+                    discoveryDocs: GOOGLE_CONFIG.DISCOVERY_DOCS,
+                });
+                gapiInited = true;
+                maybeEnableButtons();
+            } catch (error) {
+                console.error('Error initializing GAPI client:', error);
+            }
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                scope: GOOGLE_CONFIG.SCOPES,
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        console.error('Token error:', response);
+                        alert('Google 認證失敗，請重試。');
+                        return;
+                    }
+                    accessToken = response.access_token;
+                    if (currentPickerCallback) {
+                        createPicker(currentPickerCallback);
+                    }
+                },
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                console.log('Google API 已就緒');
+            }
+        }
+
+        // 尋找 ThetaDataOI 資料夾
+        async function findThetaDataFolder() {
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: `name='${GOOGLE_CONFIG.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                    fields: 'files(id, name)',
+                    spaces: 'drive'
+                });
+
+                const files = response.result.files;
+                if (files && files.length > 0) {
+                    return files[0].id;
+                }
+
+                console.warn(`找不到資料夾: ${GOOGLE_CONFIG.FOLDER_NAME}`);
+                return null;
+            } catch (error) {
+                console.error('尋找資料夾時發生錯誤:', error);
+                return null;
+            }
+        }
+
+        // 建立 Google Picker
+        async function createPicker(callback) {
+            const folderId = await findThetaDataFolder();
+
+            if (!folderId) {
+                alert(`找不到 Google Drive 資料夾 "${GOOGLE_CONFIG.FOLDER_NAME}"，請確認資料夾存在。`);
+                return;
+            }
+
+            const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+                .setParent(folderId)
+                .setIncludeFolders(true)  // 改為 true，顯示資料夾
+                .setSelectFolderEnabled(false)  // 不允許選擇資料夾本身
+                .setMimeTypes('text/csv,application/vnd.ms-excel');
+
+            const picker = new google.picker.PickerBuilder()
+                .setAppId(GOOGLE_CONFIG.CLIENT_ID.split('-')[0])
+                .setOAuthToken(accessToken)
+                .addView(view)
+                .setDeveloperKey(GOOGLE_CONFIG.API_KEY)
+                .setCallback((data) => pickerCallback(data, callback))
+                .setTitle(`選擇 CSV 檔案 - ${GOOGLE_CONFIG.FOLDER_NAME}`)
+                .build();
+
+            picker.setVisible(true);
+        }
+
+        // Picker 回調函數
+        function pickerCallback(data, userCallback) {
+            if (data.action === google.picker.Action.PICKED) {
+                const file = data.docs[0];
+                downloadFileFromDrive(file.id, file.name, userCallback);
+            }
+        }
+
+        // 從 Google Drive 下載檔案
+        async function downloadFileFromDrive(fileId, fileName, callback) {
+            try {
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+
+                const content = response.body;
+
+                // 建立一個模擬的 File 物件
+                const blob = new Blob([content], { type: 'text/csv' });
+                const file = new File([blob], fileName, { type: 'text/csv' });
+
+                if (callback) {
+                    callback(file);
+                }
+            } catch (error) {
+                console.error('下載檔案時發生錯誤:', error);
+                alert(`下載檔案失敗: ${error.message}`);
+            }
+        }
+
+        // 開啟 Picker 的主要函數
+        function openGooglePicker(callback) {
+            currentPickerCallback = callback;
+
+            if (!gapiInited || !gisInited) {
+                alert('Google API 尚未初始化，請稍後再試。');
+                return;
+            }
+
+            if (!accessToken) {
+                // 需要授權
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                // 已有 token，直接開啟 picker
+                createPicker(callback);
+            }
+        }
+
+        // 載入 Google API
+        window.addEventListener('load', () => {
+            if (typeof gapi !== 'undefined') {
+                gapiLoaded();
+            }
+            if (typeof google !== 'undefined' && google.accounts) {
+                gisLoaded();
+            }
+        });
+
+        // ===== 原有的常數定義 =====
         // Color palette for different expirations
         const colorPalette = [
             'rgb(255,111,0)',   // Orange
@@ -104,19 +281,79 @@
             'rgb(128,0,128)'    // Violet
         ];
 
-        document.getElementById('csvFileInput1').addEventListener('change', function (event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const csvData = e.target.result;
-                    parseAndPlotCSV(csvData);
-                };
-                reader.readAsText(file);
-            }
+        // 檔案輸入處理
+        const fetchButton = document.getElementById('fetchButton1');
+        const fileInput = document.getElementById('csvFileInput1');
+
+        // 點擊按鈕時開啟 Google Picker
+        fetchButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            openGooglePicker(async (file) => {
+                await processFile(file);
+            });
         });
 
-        function parseAndPlotCSV(csvData) {
+        // 保留原有的檔案選擇功能（作為備選）
+        fileInput.addEventListener('change', async function (event) {
+            const file = event.target.files[0];
+            await processFile(file);
+            event.target.value = "";
+        });
+
+        // 拖放功能
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            fetchButton.addEventListener(eventName, (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                fetchButton.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'dragend'].forEach((eventName) => {
+            fetchButton.addEventListener(eventName, (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                fetchButton.classList.remove('drag-over');
+            });
+        });
+
+        fetchButton.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            fetchButton.classList.remove('drag-over');
+            const file = event.dataTransfer?.files?.[0];
+            await processFile(file);
+        });
+
+        // 處理檔案的統一函數
+        async function processFile(file) {
+            if (!file) {
+                return;
+            }
+
+            try {
+                let content;
+                if (typeof file.text === "function") {
+                    content = await file.text();
+                } else {
+                    content = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsText(file);
+                    });
+                }
+
+                // 去掉 .csv 副檔名
+                const filename = file.name.replace(/\.csv$/i, '');
+                parseAndPlotCSV(content, filename);
+            } catch (error) {
+                console.error('處理檔案時發生錯誤:', error);
+                alert(`處理檔案失敗：${error.message}`);
+            }
+        }
+
+        function parseAndPlotCSV(csvData, filename = '') {
             const lines = csvData.trim().split('\n');
             const headers = lines[0].split(',');
 
@@ -284,6 +521,17 @@
                         text: 'CALL',
                         showarrow: false,
                         font: { size: 12, color: '#2a3f5f' }
+                    },
+                    {
+                        xref: 'paper',
+                        yref: 'paper',
+                        x: 0.99,
+                        y: 0.99,
+                        xanchor: 'right',
+                        yanchor: 'top',
+                        text: filename,
+                        showarrow: false,
+                        font: { size: 10, color: '#2a3f5f' }
                     }
                 ]
             };

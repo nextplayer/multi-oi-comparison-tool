@@ -1685,8 +1685,23 @@
                     paper_bgcolor: "white",
                     margin: { l: 60, r: 20, t: 40, b: 60 },
                     height: 660,
+                    annotations: [
+                        {
+                            x: -axisMax * 0.5,
+                            y: Math.max(...allPrices),
+                            text: 'PUT',
+                            showarrow: false,
+                            font: { size: 12, color: '#333' }
+                        },
+                        {
+                            x: axisMax * 0.5,
+                            y: Math.max(...allPrices),
+                            text: 'CALL',
+                            showarrow: false,
+                            font: { size: 12, color: '#333' }
+                        }
+                    ]
                 };
-
                 const expiry = (hasDataset2 ? dataset2.expiry : dataset1.expiry) || '';
                 const symbol = (hasDataset2 ? dataset2.symbol : dataset1.symbol) || '';
                 const config = {
