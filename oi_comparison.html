@@ -159,7 +159,7 @@
 
         .chart-wrapper {
             width: 100%;
-            min-height: 660px;
+            min-height: 780px;
         }
 
         #chartOverlay1,
@@ -1684,7 +1684,7 @@
                     plot_bgcolor: "white",
                     paper_bgcolor: "white",
                     margin: { l: 60, r: 20, t: 40, b: 60 },
-                    height: 660,
+                    height: 780,
                     annotations: [
                         {
                             x: -axisMax * 0.5,
@@ -1710,7 +1710,7 @@
                     modeBarButtonsToRemove: ["lasso2d", "select2d"],
                     toImageButtonOptions: {
                         format: 'png',
-                        filename: `${symbol}_${expiry}_${hasDataset1 && hasDataset2 ? 'diff_overlay' : 'oi'}`,
+                        filename: `${symbol}_${expiry}_${hasDataset1 && hasDataset2 ? 'oi_overlay' : 'oi'}_${getCurrentTimestamp()}`,
                         height: 1080,
                         width: 1920,
                         scale: 2
@@ -2207,6 +2207,17 @@
                 dec: "12",
             };
             return mapping[monthName.slice(0, 3).toLowerCase()] || null;
+        }
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `${month}${day}_${hours}${minutes}`;
         }
 
         function stripFileExtension(fileName) {
